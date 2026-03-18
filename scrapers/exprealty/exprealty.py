@@ -9,6 +9,8 @@ import asyncio
 import json
 import re
 import time
+import uuid
+from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -39,8 +41,9 @@ query GetAgent($id: ID!) {
   agent(id: $id) {
     id firstName lastName email phoneNumber photo
     bio languages specializations
-    facebook instagram linkedIn twitter website youtube tiktok
+    facebook instagram linkedIn twitter website youtube
     city state zipcode countryCode
+    memberSince
   }
 }
 """
@@ -223,54 +226,33 @@ STATE_NAME_TO_CODE = {
 
 
 def extract_licenses(text: str) -> list[dict]:
-    def clean_text(t: str) -> str:
-        t = unescape(t)
-        t = re.sub(r"<[^>]+>", " ", t)
-        t = re.sub(r"\s+", " ", t)
-        return t.strip()
+    """
+    Extract real estate licenses from bio HTML.
+    Only matches explicit patterns like 'FL RE License:SL3515627'.
+    Returns [] rather than guessing when no clear license is found.
+    """
+    # Strip HTML tags
+    text = re.sub(r"<[^>]+>", " ", unescape(text))
+    text = re.sub(r"\s+", " ", text).strip()
 
-    def normalize_state(raw: str):
-        raw = raw.strip().lower()
-        if len(raw) == 2:
-            return raw.upper()
-        return STATE_NAME_TO_CODE.get(raw)
-
-    text = clean_text(text)
-    raw_matches = []
-
-    for state, number in re.findall(
-        r"([A-Z]{2})\s*(?:RE|Real Estate)?\s*License[:#]?\s*([A-Z0-9]+)", text, re.IGNORECASE
-    ):
-        raw_matches.append((state.upper(), number))
-
-    for state, number in re.findall(
-        r"([A-Za-z\s]+?)\s*License[:#]?\s*([A-Z0-9]+)", text, re.IGNORECASE
-    ):
-        normalized = normalize_state(state)
-        if normalized:
-            raw_matches.append((normalized, number))
-
-    for number, state in re.findall(
-        r"Lic(?:ense)?\.?\s*#?\s*([A-Z0-9]+)\s*\(?([A-Z]{2})\)?", text, re.IGNORECASE
-    ):
-        raw_matches.append((state.upper(), number))
-
-    for state, number in re.findall(
-        r"([A-Z]{2})\s*(?:DRE|License|Lic\.?)#?\s*([A-Z0-9]+)", text, re.IGNORECASE
-    ):
-        raw_matches.append((state.upper(), number))
+    # Match: "FL RE License:SL3515627" or "FL License: SL3515627"
+    matches = re.findall(
+        r"\b([A-Z]{2})\s+(?:RE\s+)?License\s*[:#]\s*([A-Z]{1,3}\d{4,10})\b",
+        text,
+        re.IGNORECASE,
+    )
 
     seen = set()
     licenses = []
-    for state, number in raw_matches:
-        key = (state, number)
+    for state, number in matches:
+        key = (state.upper(), number.upper())
         if key in seen:
             continue
         seen.add(key)
         licenses.append({
-            "locale": STATE_TO_TIMEZONE.get(state),
-            "number": number,
-            "state": state,
+            "locale": STATE_TO_TIMEZONE.get(state.upper()),
+            "number": number.upper(),
+            "state": state.upper(),
             "primary": False,
         })
 
@@ -278,6 +260,25 @@ def extract_licenses(text: str) -> list[dict]:
         licenses[0]["primary"] = True
 
     return licenses
+
+
+# ── Member-since extraction ───────────────────────────────────────────────────
+
+def extract_member_since_from_uuid(agent_id: str) -> str:
+    """
+    Extract creation date from a UUID v1 agent ID.
+    UUID v1 embeds a 60-bit timestamp (100-ns intervals since 1582-10-15).
+    Returns ISO date string (YYYY-MM-DD) or "" if not a v1 UUID.
+    """
+    try:
+        u = uuid.UUID(agent_id)
+        if u.version == 1:
+            # Convert UUID v1 timestamp to Unix epoch seconds
+            ts = (u.time - 0x01B21DD213814000) / 1e7
+            return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+    except (ValueError, AttributeError):
+        pass
+    return ""
 
 
 # ── Phase 1: list scraper (browser) ─────────────────────────────────────────
@@ -383,45 +384,56 @@ async def scrape_agent_list(
 # browser. We reuse the existing Playwright page to make fetch() calls from
 # within the browser — same TLS fingerprint, same session cookies.
 
-async def get_auth_token_from_page(page) -> str:
-    """Fetch the bearer token using the browser's existing session."""
-    token = await page.evaluate(
-        f"() => fetch('{GETTOKEN_URL}').then(r => r.text())"
+async def fetch_agent_detail_via_navigation(page, agent: dict) -> dict:
+    """
+    Navigate to the agent's profile page and intercept the GraphQL response.
+    Direct fetch() calls return fake data; only the React-initiated call is real.
+    cf_clearance is already active from Phase 1, so no new CF challenge fires.
+    """
+    agent_id = agent["id"]
+    first = (agent.get("firstName") or "").replace(" ", "-")
+    last = (agent.get("lastName") or "").replace(" ", "-")
+    profile_url = (
+        f"https://www.exprealty.com/agents-search/{first}-{last}_{agent_id}"
     )
-    token = (token or "").strip()
-    if not token:
-        raise RuntimeError("gettoken returned empty response")
-    print(f"Auth token obtained ({token[:20]}…)")
-    return token
 
+    captured: dict = {}
 
-async def fetch_agent_detail_from_page(page, agent_id: str, auth_token: str) -> dict:
-    """Make the GraphQL detail call from within the browser."""
-    query = DETAIL_QUERY.replace("`", "\\`").replace("${", "\\${")
-    result = await page.evaluate(f"""
-        async () => {{
-            const resp = await fetch('{GRAPHQL_URL}', {{
-                method: 'POST',
-                headers: {{
-                    'Authorization': 'Bearer {auth_token}',
-                    'Content-Type': 'application/json',
-                }},
-                body: JSON.stringify({{
-                    query: `{query}`,
-                    variables: {{ id: '{agent_id}' }}
-                }})
-            }});
-            return await resp.json();
-        }}
-    """)
-    return (result.get("data") or {}).get("agent") or {}
+    async def capture_detail(response):
+        if "agentdir-api.expproptech.com/graphql" not in response.url:
+            return
+        try:
+            body = await response.json()
+            agent_data = (body.get("data") or {}).get("agent")
+            if agent_data and agent_data.get("id"):
+                captured.update(agent_data)
+        except Exception:
+            pass
+
+    page.on("response", capture_detail)
+    try:
+        await page.goto(profile_url, wait_until="domcontentloaded", timeout=30_000)
+        for _ in range(20):  # wait up to 10s for the GraphQL call
+            if captured:
+                break
+            await asyncio.sleep(0.5)
+    finally:
+        page.remove_listener("response", capture_detail)
+
+    return captured
 
 
 def build_agent_record(detail: dict) -> dict:
     """Map raw GraphQL detail response to our output schema."""
     bio = detail.get("bio") or ""
+    agent_id = detail.get("id") or ""
+    # Prefer API-provided memberSince; fall back to UUID v1 timestamp
+    member_since = (
+        detail.get("memberSince")
+        or extract_member_since_from_uuid(agent_id)
+    )
     return {
-        "id":          detail.get("id") or "",
+        "id":          agent_id,
         "firstName":   detail.get("firstName") or "",
         "lastName":    detail.get("lastName") or "",
         "email":       detail.get("email") or "",
@@ -435,12 +447,12 @@ def build_agent_record(detail: dict) -> dict:
         "twitter":     detail.get("twitter") or "",
         "website":     detail.get("website") or "",
         "youtube":     detail.get("youtube") or "",
-        "tiktok":      detail.get("tiktok") or "",
         "city":        detail.get("city") or "",
         "state":       detail.get("state") or "",
         "zipcode":     detail.get("zipcode") or "",
         "countryCode": detail.get("countryCode") or "",
         "license":     extract_licenses(bio),
+        "memberSince": member_since,
     }
 
 
@@ -520,21 +532,19 @@ async def scrape_all(
 
             print(f"\nPhase 1 complete: {len(list_agents)} agents")
 
-            # ── Phase 2: enrich each agent via browser fetch ──
+            # ── Phase 2: enrich each agent via profile page navigation ──
             print("\nPhase 2: fetching agent details…")
-            auth_token = await get_auth_token_from_page(page)
 
             for i, agent in enumerate(list_agents, 1):
-                agent_id = agent.get("id")
-                if not agent_id:
+                if not agent.get("id"):
                     continue
                 try:
-                    detail = await fetch_agent_detail_from_page(page, agent_id, auth_token)
+                    detail = await fetch_agent_detail_via_navigation(page, agent)
                     record = build_agent_record(detail)
                     all_agents.append(record)
                     print(f"[{i}/{len(list_agents)}] {record['firstName']} {record['lastName']}")
                 except Exception as e:
-                    print(f"[{i}/{len(list_agents)}] Error for {agent_id}: {e}")
+                    print(f"[{i}/{len(list_agents)}] Error for {agent.get('id')}: {e}")
 
                 if i < len(list_agents):
                     await asyncio.sleep(detail_rate_limit_s)
@@ -556,17 +566,12 @@ if __name__ == "__main__":
     enriched = asyncio.run(scrape_all(num_pages=pages))
     print(f"\nTotal enriched: {len(enriched)} agents")
 
-    out = Path(__file__).parent / "agents.json"
-    out.write_text(json.dumps(enriched, indent=2))
-    print(f"Saved → {out}")
-
-    # Also save as CSV (flatten list fields)
     csv_out = Path(__file__).parent / "agents.csv"
     fieldnames = [
         "id", "firstName", "lastName", "email", "phoneNumber", "photo",
         "languages", "specializations",
-        "facebook", "instagram", "linkedIn", "twitter", "website", "youtube", "tiktok",
-        "city", "state", "zipcode", "countryCode", "license",
+        "facebook", "instagram", "linkedIn", "twitter", "website", "youtube",
+        "city", "state", "zipcode", "countryCode", "license", "memberSince",
     ]
     with csv_out.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -575,6 +580,9 @@ if __name__ == "__main__":
             row = {**a}
             row["languages"] = ", ".join(a.get("languages") or [])
             row["specializations"] = ", ".join(a.get("specializations") or [])
-            row["license"] = json.dumps(a.get("license") or [])
+            licenses = a.get("license") or []
+            row["license"] = "; ".join(
+                f"{lic['number']} ({lic['state']})" for lic in licenses
+            )
             writer.writerow(row)
     print(f"Saved → {csv_out}")
