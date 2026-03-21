@@ -1,6 +1,7 @@
 import asyncio
 import csv
 import json
+import random
 import re
 import signal
 import sys
@@ -501,10 +502,25 @@ async def fetch_agent_detail_via_navigation(page: Page, agent: dict) -> dict:
 
         page.on("response", capture_detail)
         try:
-            await page.goto(profile_url, wait_until="domcontentloaded", timeout=30_000)
+            nav_ok = True
+            try:
+                await page.goto(profile_url, wait_until="domcontentloaded", timeout=30_000)
+            except Exception:
+                nav_ok = False
+
+            if not nav_ok:
+                # CF silently dropped the TCP connection — cool down before retrying
+                print("Navigation timed out — CF rate-limit suspected. Cooling down 60s…")
+                await asyncio.sleep(60.0)
+                try:
+                    await page.goto(profile_url, wait_until="domcontentloaded", timeout=30_000)
+                except Exception:
+                    pass
 
             if "Just a moment" in await page.title():
                 await bypass_cloudflare(page)
+                # bypass_cloudflare navigates away; go back to the profile
+                await page.goto(profile_url, wait_until="domcontentloaded", timeout=30_000)
 
             for _ in range(40):
                 if captured:
@@ -556,7 +572,7 @@ def build_agent_record(detail: dict) -> dict:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-async def scrape_all(num_pages: int = 1, detail_rate_limit_s: float = 0.5) -> None:
+async def scrape_all(num_pages: int = 1, detail_rate_limit_s: float = 3.0) -> None:
     _stop = False
 
     def _handle_sigint(sig, frame):
@@ -632,7 +648,13 @@ async def scrape_all(num_pages: int = 1, detail_rate_limit_s: float = 0.5) -> No
                     print(f"[{i}/{len(unique_agents)}] Error for {agent.get('id')}: {e}")
 
                 if i < len(unique_agents):
-                    await asyncio.sleep(detail_rate_limit_s)
+                    # Periodic long pause every 25 agents to let CF rate window reset
+                    if i % 25 == 0:
+                        print(f"Pausing 90s at agent {i} to reset CF rate window…")
+                        await asyncio.sleep(90.0)
+                    else:
+                        jitter = random.uniform(0.0, 2.0)
+                        await asyncio.sleep(detail_rate_limit_s + jitter)
 
         finally:
             csv_file.close()
