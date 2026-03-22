@@ -1,0 +1,104 @@
+[
+  {
+    "email": "aggi@byblue.com",
+    "first_name": "Agnieszka",
+    "full_payload": {
+      "activated": true,
+      "address": "",
+      "avatar": "https://img.netty.immo/company54396zsr/assets/nego/2354_l.jpg?cache=17740320252",
+      "cities_covered": [],
+      "city": "Mougins",
+      "created_by_user_id": {"user_id": 0},
+      "deleted": false,
+      "departments_covered": [],
+      "email": "aggi@byblue.com",
+      "external_key": "74244",
+      "first_name": "Agnieszka",
+      "gender": 2,
+      "job": "Commercial",
+      "last_name": "HANCOCK",
+      "legal_agency_fees_url": "",
+      "legal_attestation_number": "",
+      "legal_form": 1,
+      "legal_pro_card_number": "",
+      "legal_rcp_number": "",
+      "legal_rsac_number": "80785280100016 GRASSE",
+      "legal_status": 1,
+      "legal_t_card_number": "",
+      "linked_company_id": {"company_id": 32},
+      "modified_by_user_id": {"user_id": 2264},
+      "phone_mobile": "0648826044",
+      "postal_code": "06250",
+      "presentation_short": "",
+      "tags": [],
+      "time_created": "2021-06-23T10:19:08.000Z",
+      "time_modified": "2026-03-20T18:40:25.000Z",
+      "user_id": 2354,
+      "user_profile": 2,
+      "user_uuid": "0199e96a-46e7-75d3-a05c-00b2d7863ade"
+    },
+    "id": "7775a143-fe62-4eb9-9643-491bec4021b3",
+    "last_name": "HANCOCK",
+    "licence_number": "80785280100016",
+    "middle_family_name": null,
+    "phone": "0648826044",
+    "picture": "https://img.netty.immo/company54396zsr/assets/nego/2354_l.jpg?cache=17740320252"
+  },
+  
+  {
+    "about": null,
+    "active": true,
+    "bio": "Seit über 40 Jahren lebe ich meine Leidenschaft für Immobilien. Bereits 1985 habe ich die Prüfungen zum Immobilienfachwirt vor der IHK Kiel sowie zum Auktionator vor der IHK Osnabrück erfolgreich abgelegt und damit den Grundstein für meine professionelle Tätigkeit gelegt.\n\n1986 wagte ich den Schritt in die Selbstständigkeit und arbeite seitdem als Immobilienmakler in Sögel – mit einem klaren Ziel: für jeden Kunden die perfekte Lösung zu finden. Durch meine Weiterbildung zum Versicherungsfachmann und Finanzvermittler kann ich auch in diesen Bereichen auf über 30 Jahre Erfahrung zurückgreifen.\n\nImmobilienverkauf bedeutet für mich weit mehr, als Objekte zu vermitteln. Ich begleite meine Kunden umfassend – von der Finanzierung über Versicherungslösungen bis hin zur erfolgreichen Übergabe der Immobilie.\n\nMeine Philosophie: Kompetenz trifft auf Erfahrung – verbunden mit persönlicher Betreuung. So entsteht Vertrauen, und jeder Immobilienwunsch wird bestmöglich umgesetzt. \n\n\"Ihre Geschichte verdient den richtigen Partner – wir sind erst zufrieden, wenn Sie es sind.\"",
+    "blog_settings": {
+      "blogDescription": "Gerne halte ich Sie hier über meine Makleraktivitäten auf dem Laufenden und informiere Sie über aktuelle Immobilienthemen.",
+      "blogSubtitlePrefix": "Neueste Nachrichten und Einblicke von",
+      "blogTitle": "Immobilienblog & Marktanalysen"
+    },
+    "country": "Germany",
+    "created_at": "2026-03-10T12:39:48.618735+00:00",
+    "email": "werner.brinkmann@expgermany.de",
+    "footer": {
+      "companyName": "eXp Realty",
+      "customLinks": [
+        {
+          "label": "Impressum",
+          "url": "https://www.expgermany.de/impressum"
+        }
+      ],
+      "disclaimer": "This website is not the official website of eXp Realty. It is owned and maintained by an independent eXp Realty agent.",
+      "showQuickLinks": true,
+      "showResourceLinks": true
+    },
+    "google_place_id": null,
+    "homepage": {
+      "featuredImage1": "https://nhkxpqunzawllesgatth.supabase.co/storage/v1/object/public/agent-images/1773832279518-guyf8i5i2k4.jpg",
+      "featuredImage2": "https://nhkxpqunzawllesgatth.supabase.co/storage/v1/object/public/agent-images/1773833219544-kr17liyaqng.jpg",
+      "featuredImage3": "https://nhkxpqunzawllesgatth.supabase.co/storage/v1/object/public/agent-images/1773146317005-pg5lddzedu.jpg",
+      "heroImage": "https://nhkxpqunzawllesgatth.supabase.co/storage/v1/object/public/agent-images/1773834482833-2jmwyng8x8q.jpg",
+      "heroSubtitle": "Wir sind erst zufrieden, wenn Sie es sind.",
+      "heroTitle": "Ihre Geschichte verdient den richtigen Partner",
+      "welcomeContent": "Ihr Traumhaus beginnt hier – Willkommen beim Immobilienfachwirt/Auktionator: Werner Brinkmann\n\nJede Immobilie erzählt eine Geschichte. Ob Sie Ihr Zuhause verkaufen oder Ihre Traumimmobilie finden möchten – wir begleiten Sie persönlich, zuverlässig und mit Herz.\n\nSeit über 40 Jahren setzen wir alles daran, dass Immobiliengeschäfte fair, transparent und erfolgreich verlaufen.\n\nWarum wir:\n\n• Wir kennen unseare Region wie unsere Westentasche – Emsland, Cloppenburg, Ostfriesland & Nordseeküste.\n\n• Jede Immobilie wird von uns persönlich besichtigt, bewertet und professionell präsentiert.\n\n• Wir sorgen dafür, dass Sie Ihre Ziele erreichen: den besten Preis beim Verkauf oder das perfekte Zuhause beim Kauf.\n• Starkes Netzwerk: Architekten, Handwerker, Banken, Notare – alles aus einer Hand.\n\n• Überregionale Präsentation auf allen großen Immobilienportalen und unserer Homepage.\n\nIhre Geschichte verdient den richtigen Partner – wir sind erst zufrieden, wenn Sie es sind.",
+      "welcomeTitle": "„Ihre Geschichte. Ihr Zuhause. Ihr Partner.\" Wir begleiten Sie persönlich und kompetent auf dem Weg zu Ihrer Wunschimmobilie."
+    },
+    "id": "c3e3ce88-0034-45ee-afe4-98f2553d0088",
+    "is_primary": false,
+    "lead_count": 0,
+    "name": "Werner Brinkmann",
+    "phone": "1725202694",
+    "photo": "https://nhkxpqunzawllesgatth.supabase.co/storage/v1/object/public/agent-images/1773831509229-pebz93w96nr.jpg",
+    "properties": {
+      "showActivePropertiesOnly": true,
+      "showAgentPropertiesOnly": false
+    },
+    "reviews_widget_code": null,
+    "subdomain": "werner-brinkmann",
+    "template_id": "residential",
+    "uk_area_guide": null,
+    "uk_homepage": null,
+    "uk_services": null,
+    "uk_testimonials": null,
+    "updated_at": "2026-03-18T11:48:08.458759+00:00",
+    "user_id": "70e00ccd-4344-4c72-81dc-0f7e9184edba",
+    "website_status": "published"
+  }
+]

@@ -5,7 +5,6 @@ Supabase REST API
 import csv
 import os
 import requests
-from pprint import pprint
 from datetime import datetime
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), "exp_france_agents.csv")
@@ -194,3 +193,5 @@ if __name__ == "__main__":
     agents_parsed = [enrich_agent_with_website(parse_agent_data(a), website_map) for a in agents]
     written = write_agents_to_csv(agents_parsed)
     print(f"{written} new agents written.")
+
+    
