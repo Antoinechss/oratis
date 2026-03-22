@@ -2,9 +2,16 @@
 Supabase REST API
 """
 
+import csv
+import os
 import requests
 from pprint import pprint
 from datetime import datetime
+
+CSV_PATH = os.path.join(os.path.dirname(__file__), "exp_france_agents.csv")
+CSV_FIELDS = ["id", "first_name", "last_name", "email", "phone", "picture",
+              "address", "location", "licence_number", "RSAC_identifier",
+              "member_since", "cities_covered", "linkedin"]
 
 #### Configs ####
 
@@ -114,6 +121,35 @@ def build_website_map(website_response):
     return website_map
 
 
+#### CSV FUNCTIONS ####
+
+def load_existing_ids(filepath):
+    """Returns a set of agent IDs already written in the CSV."""
+    if not os.path.exists(filepath):
+        return set()
+    with open(filepath, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        return {row["id"] for row in reader}
+
+
+def write_agents_to_csv(agents, filepath=CSV_PATH):
+    """Appends agents to CSV, skipping any whose ID is already present."""
+    existing_ids = load_existing_ids(filepath)
+    new_agents = [a for a in agents if a.get("id") not in existing_ids]
+
+    if not new_agents:
+        return 0
+
+    file_exists = os.path.exists(filepath)
+    with open(filepath, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
+        if not file_exists:
+            writer.writeheader()
+        writer.writerows(new_agents)
+
+    return len(new_agents)
+
+
 #### JSON PARSING FUNCTIONS & ENRICHMENT ###
 
 def parse_agent_data(response):
@@ -151,10 +187,10 @@ def enrich_agent_with_website(agent, website_map):
 
 
 if __name__ == "__main__": 
-    agent_batch = fetch_agents_page(offset=0, limit=5)
+    agent_batch = fetch_agents_page(offset=0, limit=100)
     websites = fetch_websites_page()
     website_map = build_website_map(websites)
     agents = agent_batch[0]
-    agent = parse_agent_data(agents[1])
-    agent = enrich_agent_with_website(agent, website_map)
-    pprint(agent)
+    agents_parsed = [enrich_agent_with_website(parse_agent_data(a), website_map) for a in agents]
+    written = write_agents_to_csv(agents_parsed)
+    print(f"{written} new agents written.")
