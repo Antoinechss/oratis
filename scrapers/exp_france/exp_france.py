@@ -10,7 +10,7 @@ from datetime import datetime
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), "exp_france_agents.csv")
 CSV_FIELDS = ["id", "first_name", "last_name", "email", "phone", "picture",
-              "address", "location", "licence_number", "RSAC_identifier",
+              "location", "licence_number", "RSAC_identifier",
               "member_since", "cities_covered", "linkedin"]
 
 #### Configs ####
@@ -115,9 +115,9 @@ def build_website_map(website_response):
     website_map = {}
 
     for w in website_response:
-        user_id = w.get("user_id")
-        if user_id:
-            website_map[user_id] = w
+        email = w.get("email")
+        if email:
+            website_map[email.lower()] = w
     return website_map
 
 
@@ -161,7 +161,6 @@ def parse_agent_data(response):
 
     # Personal Details
     agent["id"] = full_payload.get("user_uuid") or response.get("id") # Fallback on generic ID is uuid is missing
-    agent["address"] = full_payload.get("address")
     agent['picture'] = response.get("picture")
     agent["first_name"] = response.get("first_name")
     agent["last_name"] = response.get("last_name")
@@ -179,18 +178,19 @@ def parse_agent_data(response):
 
 
 def enrich_agent_with_website(agent, website_map):
-    user_id = agent.get("id")
-    website = website_map.get(user_id)
+    email = (agent.get("email") or "").lower()
+    website = website_map.get(email)
     linkedin_url = parse_linkedin(website)
     agent["linkedin"] = linkedin_url
     return agent
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     agent_batch = fetch_agents_page(offset=0, limit=100)
     websites = fetch_websites_page()
     website_map = build_website_map(websites)
     agents = agent_batch[0]
+
     agents_parsed = [enrich_agent_with_website(parse_agent_data(a), website_map) for a in agents]
     written = write_agents_to_csv(agents_parsed)
     print(f"{written} new agents written.")
