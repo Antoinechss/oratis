@@ -8,9 +8,11 @@ import requests
 from datetime import datetime
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), "exp_france_agents.csv")
-CSV_FIELDS = ["id", "first_name", "last_name", "email", "phone", "picture",
-              "location", "licence_number", "RSAC_identifier",
-              "member_since", "cities_covered", "linkedin"]
+CSV_FIELDS = [
+    "id", "first_name", "last_name", "postal_code", "city", "phone_number",
+    "arrival_date", "email", "linkedin_url", "nb_mandates", "avg_mandate_price",
+    "nb_sales", "url_website", "network"
+]
 
 #### Configs ####
 
@@ -68,29 +70,33 @@ def fetch_agents_page(offset: int, limit: int):
 
 def extract_arrival_date(date_str):
     """
-    Helper function that extracts year and month of arrival from the 
+    Helper function that extracts arrival date from the
     time_created timestamp in the json response
     """
-    if not date_str: 
-        return None 
-    try: 
-        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-        return dt.strftime("%Y-%m")
-    except Exception: 
+    if not date_str:
         return None
-
-
-def extract_cities_covered(cities_dict): 
-    """
-    extracts the city only from the dict of cities covered 
-    """ 
-    if not cities_dict: 
-        return None 
     try:
-        cities = [city['name'] for city in cities_dict]
-        return cities 
-    except Exception: 
+        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d")
+    except Exception:
         return None
+
+
+def format_phone(phone_str):
+    """
+    Formats a French phone number to +33XXXXXXXXX format.
+    Handles inputs like 0612345678, +33612345678, 33612345678.
+    """
+    if not phone_str:
+        return None
+    digits = "".join(c for c in str(phone_str) if c.isdigit() or c == "+")
+    digits = digits.replace("+", "")
+    if digits.startswith("33") and len(digits) == 11:
+        return f"+{digits}"
+    if digits.startswith("0") and len(digits) == 10:
+        return f"+33{digits[1:]}"
+    return phone_str
+
 
 
 def parse_linkedin(website_response): 
@@ -158,20 +164,20 @@ def parse_agent_data(response):
     full_payload = response.get("full_payload") or {}
     agent = {}
 
-    # Personal Details
-    agent["id"] = full_payload.get("user_uuid") or response.get("id") # Fallback on generic ID is uuid is missing
-    agent['picture'] = response.get("picture")
+    agent["id"] = full_payload.get("user_uuid") or response.get("id")
     agent["first_name"] = response.get("first_name")
     agent["last_name"] = response.get("last_name")
+    agent["postal_code"] = full_payload.get("postal_code")
+    agent["city"] = full_payload.get("city")
+    agent["phone_number"] = format_phone(response.get("phone"))
+    agent["arrival_date"] = extract_arrival_date(full_payload.get("time_created"))
     agent["email"] = response.get("email")
-    agent["phone"] = response.get("phone")
-    agent["location"] = full_payload.get("city")
-
-    # Work details
-    agent["licence_number"] = response.get("licence_number")
-    agent["RSAC_identifier"] = full_payload.get("legal_rsac_number")
-    agent["member_since"] = extract_arrival_date(full_payload.get("time_created"))
-    agent["cities_covered"] = extract_cities_covered(full_payload.get("cities_covered"))
+    agent["linkedin_url"] = None  # filled by enrich_agent_with_website
+    agent["nb_mandates"] = None
+    agent["avg_mandate_price"] = None
+    agent["nb_sales"] = None
+    agent["url_website"] = None
+    agent["network"] = "ExP France"
 
     return agent
 
@@ -179,8 +185,7 @@ def parse_agent_data(response):
 def enrich_agent_with_website(agent, website_map):
     email = (agent.get("email") or "").lower()
     website = website_map.get(email)
-    linkedin_url = parse_linkedin(website)
-    agent["linkedin"] = linkedin_url
+    agent["linkedin_url"] = parse_linkedin(website)
     return agent
 
 
