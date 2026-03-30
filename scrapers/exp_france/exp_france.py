@@ -1,7 +1,3 @@
-"""
-Supabase REST API
-"""
-
 import csv
 import os
 import requests
