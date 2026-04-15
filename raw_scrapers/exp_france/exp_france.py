@@ -14,9 +14,10 @@ CSV_FIELDS = [
 
 ORIGIN_URL = "https://www.expfrance.fr/findanagent"
 AGENTS_URL = "https://ywzpnbmomlzkcbzzkaqr.supabase.co/rest/v1/agents"
+LISTINGS_URL = "https://ywzpnbmomlzkcbzzkaqr.supabase.co/rest/v1/listings"
 WEBSITES_URL = "https://nhkxpqunzawllesgatth.supabase.co/rest/v1/websites"
-WEBSITES_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oa3hwcXVuemF3bGxlc2dhdHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzOTkzNDIsImV4cCI6MjA1Nzk3NTM0Mn0.0oKdjpmGHuSoD-4DGnl6LNkrVw2uv15Yl3vPig0BSbY"
-AGENTS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3enBuYm1vbWx6a2NienprYXFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ2NDkyMzMsImV4cCI6MjA2MDIyNTIzM30.6b8PT7DMzY2jnRgglammdCpqsT6EKR1_Na2T7djGb9A"
+WEBSITES_API_KEY = os.environ.get("EXP_WEBSITES_API_KEY", "")
+AGENTS_API_KEY = os.environ.get("EXP_AGENTS_API_KEY", "")
 
 
 agents_headers = {
@@ -60,6 +61,42 @@ def fetch_agents_page(offset: int, limit: int):
     response = requests.get(url=AGENTS_URL, params=params, headers=agents_headers, timeout=30)
     response.raise_for_status()
     return response.json(), response.headers
+
+
+def fetch_agent_listings(agent_email, agent_id):
+    """
+    Fetches active sale listings for a given agent from the listings table.
+    Returns (nb_mandates, avg_mandate_price, most_common_city, most_common_zipcode).
+    City/zipcode are derived from the most frequent values across listings.
+    """
+    or_filter = f"agent_email.eq.{agent_email},agent_id.eq.{agent_id},secondary_agent_id.eq.{agent_id}"
+    params = {
+        "select": "price,city,zipcode",
+        "listing_type": "in.(1,5,7)",
+        "country_code": "eq.FR",
+        "or": f"({or_filter})",
+        "status": "in.(1,2,3,4)",
+        "offset": 0,
+        "limit": 100,
+    }
+    try:
+        response = requests.get(url=LISTINGS_URL, params=params, headers=agents_headers, timeout=30)
+        response.raise_for_status()
+        listings = response.json()
+        if not listings:
+            return 0, None, None, None
+        prices = [l["price"] for l in listings if l.get("price") and l["price"] > 0]
+        nb_mandates = len(listings)
+        avg_price = int(sum(prices) / len(prices)) if prices else None
+        # Most frequent city/zipcode from listings
+        cities = [l["city"] for l in listings if l.get("city")]
+        zipcodes = [l["zipcode"] for l in listings if l.get("zipcode")]
+        top_city = max(set(cities), key=cities.count) if cities else None
+        top_zipcode = max(set(zipcodes), key=zipcodes.count) if zipcodes else None
+        return nb_mandates, avg_price, top_city, top_zipcode
+    except Exception as e:
+        print(f"Error fetching listings for {agent_email}: {e}")
+        return None, None, None, None
 
 
 #### Helper & Formatting functions ####
@@ -178,10 +215,32 @@ def parse_agent_data(response):
     return agent
 
 
+def parse_website_url(website_response):
+    """Builds the agent's personal website URL from the subdomain field."""
+    if not website_response:
+        return None
+    subdomain = website_response.get("subdomain")
+    if not subdomain:
+        return None
+    return f"https://{subdomain}.expfrance.fr/"
+
+
 def enrich_agent_with_website(agent, website_map):
     email = (agent.get("email") or "").lower()
     website = website_map.get(email)
     agent["linkedin_url"] = parse_linkedin(website)
+    agent["url_website"] = parse_website_url(website)
+    # Enrich with listings data
+    agent_id = agent.get("id") or ""
+    agent_email = agent.get("email") or ""
+    nb_mandates, avg_price, listing_city, listing_zip = fetch_agent_listings(agent_email, agent_id)
+    agent["nb_mandates"] = nb_mandates if nb_mandates else None
+    agent["avg_mandate_price"] = avg_price
+    # Fill city/postal_code from listings if missing in agent profile
+    if not agent.get("city") and listing_city:
+        agent["city"] = listing_city
+    if not agent.get("postal_code") and listing_zip:
+        agent["postal_code"] = listing_zip
     return agent
 
 

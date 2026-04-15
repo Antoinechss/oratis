@@ -1,0 +1,44 @@
+{
+    "title": "ExP Florida Scraper Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "captchaApiKey": {
+            "title": "2captcha API Key",
+            "type": "string",
+            "description": "Clé API 2captcha pour résoudre les challenges Cloudflare Turnstile",
+            "editor": "textfield",
+            "isSecret": true
+        },
+        "numPages": {
+            "title": "Nombre de pages à scraper",
+            "type": "integer",
+            "description": "Nombre de pages de liste d'agents à parcourir (chaque page ≈ 20 agents)",
+            "default": 1,
+            "minimum": 1,
+            "editor": "number"
+        },
+        "detailRateLimit": {
+            "title": "Délai entre agents (secondes)",
+            "type": "number",
+            "description": "Pause de base entre deux pages de détail agent (un jitter aléatoire de 0-2s est ajouté)",
+            "default": 3.0,
+            "minimum": 1.0,
+            "editor": "number"
+        },
+        "supabaseUrl": {
+            "title": "Supabase URL (staging)",
+            "type": "string",
+            "description": "URL de votre projet Supabase staging (ex: https://xxxxx.supabase.co)",
+            "editor": "textfield"
+        },
+        "supabaseKey": {
+            "title": "Supabase Service Key (staging)",
+            "type": "string",
+            "description": "Clé API Supabase avec permissions d'écriture (service_role)",
+            "editor": "textfield",
+            "isSecret": true
+        }
+    },
+    "required": ["captchaApiKey"]
+}

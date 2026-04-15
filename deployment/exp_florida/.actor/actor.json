@@ -1,0 +1,9 @@
+{
+    "actorSpecification": 1,
+    "name": "exp-florida-scraper",
+    "title": "ExP Florida Scraper",
+    "description": "Scrape les agents ExP Realty (Florida) via Playwright et push dans Supabase staging",
+    "version": "1.0",
+    "buildTag": "latest",
+    "dockerfile": "../Dockerfile"
+}

@@ -1,0 +1,42 @@
+{
+    "title": "ExP France Scraper Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "agentsApiKey": {
+            "title": "ExP France Agents API Key",
+            "type": "string",
+            "description": "Clé API Supabase anon pour la base agents ExP France",
+            "editor": "textfield",
+            "isSecret": true
+        },
+        "websitesApiKey": {
+            "title": "ExP France Websites API Key",
+            "type": "string",
+            "description": "Clé API Supabase anon pour la base websites ExP France",
+            "editor": "textfield",
+            "isSecret": true
+        },
+        "maxAgents": {
+            "title": "Nombre max d'agents",
+            "type": "integer",
+            "description": "Limite le nombre d'agents à scraper (laisser vide pour tous)",
+            "nullable": true,
+            "editor": "number"
+        },
+        "supabaseUrl": {
+            "title": "Supabase URL (staging)",
+            "type": "string",
+            "description": "URL de votre projet Supabase staging (ex: https://xxxxx.supabase.co)",
+            "editor": "textfield"
+        },
+        "supabaseKey": {
+            "title": "Supabase Service Key (staging)",
+            "type": "string",
+            "description": "Clé API Supabase avec permissions d'écriture (service_role)",
+            "editor": "textfield",
+            "isSecret": true
+        }
+    },
+    "required": ["agentsApiKey", "websitesApiKey"]
+}
