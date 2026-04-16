@@ -1,0 +1,9 @@
+{
+    "actorSpecification": 1,
+    "name": "exp-spain-scraper",
+    "title": "ExP Spain Scraper",
+    "description": "Scrape tous les agents ExP Spain et push dans Supabase staging",
+    "version": "1.0",
+    "buildTag": "latest",
+    "dockerfile": "../Dockerfile"
+}

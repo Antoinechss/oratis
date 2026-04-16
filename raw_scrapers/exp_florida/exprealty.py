@@ -1,6 +1,7 @@
 import asyncio
 import csv
 import json
+import os
 import random
 import re
 import signal
@@ -17,7 +18,7 @@ from playwright.async_api import BrowserContext, Page, async_playwright
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-TWOCAPTCHA_API_KEY = "f55be8565862edb0dc57d7525b2b2427"
+TWOCAPTCHA_API_KEY = os.environ.get("TWOCAPTCHA_API_KEY", "")
 
 START_URL = (
     "https://www.exprealty.com/agents-search"
