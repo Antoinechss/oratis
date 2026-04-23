@@ -1,0 +1,28 @@
+{
+    "title": "RealAdvisor Spain Scraper Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "maxPages": {
+            "title": "Nombre max de pages listing",
+            "type": "integer",
+            "description": "Limite le nombre de pages listing à scraper (10 agents/page, 395 pages max). Laisser vide pour tout scraper.",
+            "nullable": true,
+            "editor": "number"
+        },
+        "supabaseUrl": {
+            "title": "Supabase URL (staging)",
+            "type": "string",
+            "description": "URL de votre projet Supabase staging (ex: https://xxxxx.supabase.co)",
+            "editor": "textfield"
+        },
+        "supabaseKey": {
+            "title": "Supabase Service Key (staging)",
+            "type": "string",
+            "description": "Clé API Supabase avec permissions d'écriture (service_role)",
+            "editor": "textfield",
+            "isSecret": true
+        }
+    },
+    "required": []
+}

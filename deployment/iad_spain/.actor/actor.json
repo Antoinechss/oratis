@@ -1,0 +1,9 @@
+{
+    "actorSpecification": 1,
+    "name": "iad-spain-scraper",
+    "title": "iad Spain Scraper",
+    "description": "Scrape tous les conseillers iad Spain et push dans Supabase staging",
+    "version": "1.0",
+    "buildTag": "latest",
+    "dockerfile": "../Dockerfile"
+}

@@ -1,0 +1,9 @@
+{
+    "actorSpecification": 1,
+    "name": "realadvisor-spain-scraper",
+    "title": "RealAdvisor Spain Scraper",
+    "description": "Scrape les agents RealAdvisor Spain et push dans Supabase staging",
+    "version": "1.0",
+    "buildTag": "latest",
+    "dockerfile": "../Dockerfile"
+}
