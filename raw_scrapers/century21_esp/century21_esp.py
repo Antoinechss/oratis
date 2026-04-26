@@ -87,6 +87,47 @@ def fetch_agent_linkedin(profile_url):
     return None
 
 
+# Per-run cache: agency_handler -> (city, postal_code)
+_AGENCY_CACHE = {}
+
+
+def fetch_agency_location(agency_handler, agency_link):
+    """
+    Scrapes the agency page for its address and extracts (city, postal_code).
+    Format expected: 'Street, 28660, Madrid'.
+    Cached per handler so each agency is fetched once.
+    """
+    if not agency_handler or agency_handler in _AGENCY_CACHE:
+        return _AGENCY_CACHE.get(agency_handler, (None, None))
+
+    if not agency_link:
+        _AGENCY_CACHE[agency_handler] = (None, None)
+        return None, None
+
+    try:
+        resp = requests.get(agency_link, headers=HEADERS, timeout=30)
+        resp.raise_for_status()
+        html = resp.text
+        # Match any 'Street X, 28660, City' pattern in the HTML
+        # The 5-digit postal code in the middle disambiguates from other text
+        match = re.search(
+            r'>([^<>]*?,\s*(\d{5})\s*,\s*[^<>,]+?)<',
+            html
+        )
+        if match:
+            address = match.group(1).strip()
+            parts = [p.strip() for p in address.split(",")]
+            postal = next((p for p in parts if re.match(r'^\d{5}$', p)), None)
+            city = parts[-1] if parts and not parts[-1].isdigit() else None
+            _AGENCY_CACHE[agency_handler] = (city, postal)
+            return city, postal
+    except Exception:
+        pass
+
+    _AGENCY_CACHE[agency_handler] = (None, None)
+    return None, None
+
+
 #### HELPERS ####
 
 def split_name(full_name):
@@ -171,11 +212,20 @@ def build_agent_record(agent_raw):
     nb_mandates, avg_price, city = aggregate_listings(properties)
     linkedin = fetch_agent_linkedin(agent_raw.get("link"))
 
+    # Agency-derived city/postal (cached per agency)
+    agency = agent_raw.get("agency") or {}
+    agency_city, agency_postal = fetch_agency_location(
+        agency.get("handler"), agency.get("link")
+    )
+    # Prefer agency location since it's stable; fallback to listings city
+    city = agency_city or city
+    postal_code = agency_postal
+
     return {
         "id": agent_raw.get("id"),
         "first_name": first_name,
         "last_name": last_name,
-        "postal_code": None,
+        "postal_code": postal_code,
         "city": city,
         "phone_number": normalize_phone(agent_raw.get("phone")),
         "arrival_date": None,
